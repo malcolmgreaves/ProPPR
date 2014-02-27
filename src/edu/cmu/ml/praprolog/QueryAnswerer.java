@@ -4,7 +4,6 @@ import edu.cmu.ml.praprolog.learn.PosNegRWExample;
 import edu.cmu.ml.praprolog.learn.SRW;
 import edu.cmu.ml.praprolog.learn.WeightingScheme;
 import edu.cmu.ml.praprolog.prove.*;
-import edu.cmu.ml.praprolog.prove.feat.ComplexFeatureLibrary;
 import edu.cmu.ml.praprolog.util.Configuration;
 import edu.cmu.ml.praprolog.util.Dictionary;
 import edu.cmu.ml.praprolog.util.ExperimentConfiguration;
@@ -35,13 +34,14 @@ import java.util.Map;
 public class QueryAnswerer {
     private static final Logger log = Logger.getLogger(QueryAnswerer.class);
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args)
+            throws IOException, ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException {
         QueryAnswererConfiguration c = new QueryAnswererConfiguration(
                 args,
                 Configuration.USE_DEFAULTS | Configuration.USE_QUERIES | Configuration.USE_OUTPUT |
                 Configuration.USE_PARAMS);
         LogicProgram program = new LogicProgram(Component.loadComponents(c.programFiles, c.alpha));
-        ComplexFeatureLibrary.init(program, c.complexFeatureConfigFile);
+//        ComplexFeatureLibrary.init(program, c.complexFeatureConfigFile);
 
         QueryAnswerer qa = c.rerank ?
                            new RerankingQueryAnswerer((SRW<PosNegRWExample<String>>) c.srw) :
@@ -74,7 +74,9 @@ public class QueryAnswerer {
                 query.compile(program.getSymbolTable());
                 log.info("Querying: " + query);
                 long start = System.currentTimeMillis();
+
                 Map<LogicProgramState, Double> dist = getSolutions(prover, query, program);
+
                 long end = System.currentTimeMillis();
                 Map<String, Double> solutions = Prover.filterSolutions(dist);
                 if (normalize) {
@@ -88,7 +90,7 @@ public class QueryAnswerer {
                 log.info("Writing " + solutionDist.size() + " solutions...");
 
                 writer.append("# proved ").append(String.valueOf(querynum)).append("\t").append(query.toSaveString())
-                      .append("\t").append((end - start) + " msec");
+                      .append("\t").append(String.valueOf((end - start))).append(" msec");
 
                 writer.newLine();
                 int rank = 0;
