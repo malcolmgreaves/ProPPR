@@ -34,7 +34,7 @@ import java.util.Map;
 
 public class QueryAnswerer {
     private static final Logger log = Logger.getLogger(QueryAnswerer.class);
-    
+
     static class QueryAnswererConfiguration extends ExperimentConfiguration {
         boolean normalize;
         boolean rerank;
@@ -129,9 +129,10 @@ public class QueryAnswerer {
                            new RerankingQueryAnswerer((SRW<PosNegRWExample<String>>) c.srw) :
                            new QueryAnswerer();
         log.info("Running queries from " + c.queryFile + "; saving results to " + c.outputFile);
-        if (c.paramsFile != null) {
+        if (c.paramsFile != null)
             qa.addParams(c.program, c.paramsFile, c.weightingScheme);
-        }
+        if (c.complexFeatureConfigFile != null)
+            ComplexFeatureLibrary.init(c.program, c.complexFeatureConfigFile);
         qa.findSolutions(c.program, c.prover, c.queryFile, c.outputFile, c.normalize);
     }
 }
