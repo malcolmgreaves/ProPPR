@@ -1,8 +1,6 @@
 package edu.cmu.ml.praprolog;
 
 import java.io.File;
-import java.io.IOException;
-import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -14,10 +12,7 @@ import java.util.Map.Entry;
 
 import org.apache.log4j.Logger;
 
-import edu.cmu.ml.praprolog.graph.GraphWriter;
-import edu.cmu.ml.praprolog.learn.PosNegRWExample;
 import edu.cmu.ml.praprolog.learn.WeightingScheme;
-import edu.cmu.ml.praprolog.prove.Component;
 import edu.cmu.ml.praprolog.prove.Goal;
 import edu.cmu.ml.praprolog.prove.InnerProductWeighter;
 import edu.cmu.ml.praprolog.prove.LogicProgram;
@@ -30,6 +25,7 @@ import edu.cmu.ml.praprolog.prove.TracingDfsProver;
 import edu.cmu.ml.praprolog.util.Configuration;
 import edu.cmu.ml.praprolog.util.Dictionary;
 import edu.cmu.ml.praprolog.util.ExperimentConfiguration;
+import edu.cmu.ml.praprolog.util.ParamsFile;
 
 public class Tester extends ExampleThawing {
 	private static final Logger log = Logger.getLogger(Tester.class);
@@ -53,8 +49,8 @@ public class Tester extends ExampleThawing {
 	public TestResults testExamples(File dataFile, boolean strict) {
 		int k=0;
 		double pairTotal=0,pairErrors=0,apTotal=0,numAP=0;
-		List<RawPosNegExample> examples = new RawPosNegExampleStreamer(dataFile).load();
-		for (RawPosNegExample rawX : examples) {
+//		List<RawPosNegExample> examples = new RawPosNegExampleStreamer(dataFile).load();
+		for (RawPosNegExample rawX : new RawPosNegExampleStreamer(dataFile).stream()) {
 			k++;
 //			log.debug("raw example: "+rawX.getQuery()+" "+rawX.getPosList()+" "+rawX.getNegList());
 			try {	
@@ -171,8 +167,11 @@ public class Tester extends ExampleThawing {
 		ExperimentConfiguration c = new ExperimentConfiguration(args,flags);
 		
 //		Tester tester = new Tester(c.prover, new LogicProgram(Component.loadComponents(c.programFiles,c.alpha)));
-		if (c.paramsFile != null)
-			c.tester.setParams(Dictionary.load(c.paramsFile), c.weightingScheme);
+		if (c.paramsFile != null) {
+			ParamsFile file = new ParamsFile(c.paramsFile);
+			c.tester.setParams(Dictionary.load(file), c.weightingScheme);
+			file.check(c);
+		}
 
 		log.info("Testing on "+c.testFile+"...");
 		long start = System.currentTimeMillis();

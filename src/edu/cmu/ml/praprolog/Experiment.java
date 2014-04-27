@@ -1,17 +1,20 @@
 package edu.cmu.ml.praprolog;
 
+import java.io.File;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
 
 import edu.cmu.ml.praprolog.Tester.TestResults;
 import edu.cmu.ml.praprolog.graph.AnnotatedGraphFactory;
+import edu.cmu.ml.praprolog.learn.CookedExampleStreamer;
 import edu.cmu.ml.praprolog.learn.L2PosNegLossTrainedSRW;
 import edu.cmu.ml.praprolog.prove.InnerProductWeighter;
 import edu.cmu.ml.praprolog.trove.Trainer;
 import edu.cmu.ml.praprolog.util.Configuration;
 import edu.cmu.ml.praprolog.util.Dictionary;
 import edu.cmu.ml.praprolog.util.ExperimentConfiguration;
+import edu.cmu.ml.praprolog.util.ParamsFile;
 
 public class Experiment {
 	private static final Logger log = Logger.getLogger(Experiment.class);
@@ -41,18 +44,19 @@ public class Experiment {
 		Map<String,Double> paramVec = null;
 		if (c.trove) {
 			Trainer trainer = (Trainer) c.trainer;
-			paramVec = trainer.trainParametersOnCookedIterator(trainer.importCookedExamples(c.outputFile), c.epochs, c.traceLosses);
+			paramVec = trainer.trainParametersOnCookedIterator(new edu.cmu.ml.praprolog.trove.learn.CookedExampleStreamer(c.outputFile), c.epochs, c.traceLosses);
 		} else {
 			edu.cmu.ml.praprolog.Trainer<String> trainer = (edu.cmu.ml.praprolog.Trainer<String>) c.trainer;
 			paramVec = trainer.trainParametersOnCookedIterator(
-				trainer.importCookedExamples(c.outputFile, new AnnotatedGraphFactory<String>(AnnotatedGraphFactory.STRING)),
+				new CookedExampleStreamer<String>(c.outputFile, new AnnotatedGraphFactory<String>(AnnotatedGraphFactory.STRING)),
 				c.epochs,
 				c.traceLosses);
 		}
 		//log.info("paramVec="+Dictionary.buildString(paramVec, new StringBuilder(), "\n").toString());
 		if (c.paramsFile != null) {
 			log.info("Saving parameters to "+c.paramsFile+"...");
-			Dictionary.save(paramVec, c.paramsFile);
+			ParamsFile.save(paramVec, new File(c.paramsFile), c);
+//			Dictionary.save(paramVec, c.paramsFile);
 		}
 		
 		// test trained parameters

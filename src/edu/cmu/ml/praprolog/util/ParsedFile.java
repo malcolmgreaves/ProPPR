@@ -17,24 +17,29 @@ import java.util.Map;
  *
  */
 public class ParsedFile implements Iterable<String>, Iterator<String> {
+	private boolean cheating=false;
 	private String filename;
 	private LineNumberReader reader;
 	private String peek;
 	private int dataLine=-2;
+	private boolean closed;
 	public ParsedFile(String filename) {
-		this.filename = filename;
+		this.init(filename);
+	}
+	
+	public ParsedFile(File file) {
 		try {
-			reader = new LineNumberReader(new FileReader(filename));
-			this.next();
+			this.init(file.getCanonicalPath());
 		} catch (IOException e) {
 			throw new IllegalArgumentException(e);
 		}
 	}
 	
-	public ParsedFile(File file) {
+	private void init(String filename) {
+		this.filename = filename;
 		try {
-			this.filename = file.getCanonicalPath();
-			reader = new LineNumberReader(new FileReader(file));
+			reader = new LineNumberReader(new FileReader(filename));
+			closed = false;
 			this.next();
 		} catch (IOException e) {
 			throw new IllegalArgumentException(e);
@@ -44,6 +49,13 @@ public class ParsedFile implements Iterable<String>, Iterator<String> {
 	public ParsedFile(StringReader stringReader) {
 		this.filename = stringReader.getClass().getCanonicalName() + stringReader.hashCode();
 		this.reader = new LineNumberReader(stringReader);
+
+		this.cheating=true;
+		try {
+			this.reader.mark(1024);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 		this.next();
 	}
 
@@ -65,9 +77,14 @@ public class ParsedFile implements Iterable<String>, Iterator<String> {
 		if (reader != null)
 			try {
 				reader.close();
+				this.closed = true;
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
+	}
+	
+	public boolean isClosed() {
+		return this.closed;
 	}
 	
 	@Override
@@ -95,17 +112,24 @@ public class ParsedFile implements Iterable<String>, Iterator<String> {
 	public int getAbsoluteLineNumber() {
 		return this.reader.getLineNumber()-1;
 	}
+	
+	protected boolean isComment(String line) {
+		return line.startsWith("#");
+	}
+	protected void processComment(String line) {}
 
 	@Override
 	public String next() {
 		String next = peek;
 		try {
 			peek = reader.readLine();
-			while( 
-					(peek != null) 
-					&& 
-					( ((peek=peek.trim()).length() == 0) || peek.startsWith("#") )
-				) {
+			for(boolean skip=true; peek != null; ) {
+				skip = skip && ((peek=peek.trim()).length() == 0);
+				if (isComment(peek)) {
+					skip = true;
+					processComment(peek);
+				}
+				if (!skip) break;
 				peek = reader.readLine();
 			}
 		} catch (IOException e) {
@@ -118,6 +142,23 @@ public class ParsedFile implements Iterable<String>, Iterator<String> {
 	@Override
 	public void remove() {
 		throw new UnsupportedOperationException("Can't remove a line from a file, silly");
+	}
+
+	public String getFileName() {
+		return this.filename;
+	}
+	
+	public void reset() {
+		if (this.cheating) {
+			try {
+				this.reader.reset();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		} else {
+			this.close();
+			this.init(this.filename);
+		}
 	}
 
 }

@@ -8,6 +8,7 @@ import edu.cmu.ml.praprolog.prove.feat.ComplexFeatureLibrary;
 import edu.cmu.ml.praprolog.util.Configuration;
 import edu.cmu.ml.praprolog.util.Dictionary;
 import edu.cmu.ml.praprolog.util.ExperimentConfiguration;
+import edu.cmu.ml.praprolog.util.ParamsFile;
 import edu.cmu.ml.praprolog.util.ParsedFile;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.OptionBuilder;
@@ -68,39 +69,40 @@ public class QueryAnswerer {
         }
     }
 
-    public Map<LogicProgramState, Double> getSolutions(Prover prover, Goal query, LogicProgram program) {
-        return prover.proveState(program, new ProPPRLogicProgramState(query));
-    }
 
-    public void addParams(LogicProgram program, String paramsFile, WeightingScheme wScheme) {
-        program.setFeatureDictWeighter(InnerProductWeighter.fromParamVec(Dictionary.load(paramsFile), wScheme));
-    }
+	public Map<LogicProgramState,Double> getSolutions(Prover prover,Goal query,LogicProgram program) {
+		return prover.proveState(program, new ProPPRLogicProgramState(query));
+	}
+	public void addParams(LogicProgram program, Map<String,Double> params, WeightingScheme wScheme) {
+		program.setFeatureDictWeighter(InnerProductWeighter.fromParamVec(params, wScheme));
+	}
 
-    public void findSolutions(LogicProgram program, Prover prover, File queryFile, String outputFile, boolean normalize) throws IOException {
-        ParsedFile reader = new ParsedFile(queryFile);
-        BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile));
-        try {
-            int querynum = 0;
-            for (String line : reader) {
-                querynum++;
-                String queryString = line.split("\t")[0];
-                queryString = queryString.replaceAll("[(]", ",").replaceAll("\\)", "").trim();
-                Goal query = Goal.parseGoal(queryString, ",");
-                query.compile(program.getSymbolTable());
-                log.info("Querying: " + query);
-                long start = System.currentTimeMillis();
-                Map<LogicProgramState, Double> dist = getSolutions(prover, query, program);
-                long end = System.currentTimeMillis();
-                Map<String, Double> solutions = Prover.filterSolutions(dist);
-                if (normalize) {
-                    log.debug("normalizing");
-                    solutions = Dictionary.normalize(solutions);
-                } else {
-                    log.debug("not normalizing");
-                }
-                List<Map.Entry<String, Double>> solutionDist = Dictionary.sort(solutions);
-                //			    List<Map.Entry<String,Double>> solutionDist = Dictionary.sort(Dictionary.normalize(dist));
-                log.info("Writing " + solutionDist.size() + " solutions...");
+	public void findSolutions(LogicProgram program, Prover prover, File queryFile, String outputFile, boolean normalize) throws IOException {
+
+		ParsedFile reader = new ParsedFile(queryFile);
+		BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile));
+		try {
+			int querynum=0;
+			for (String line : reader) {
+				querynum++;
+				String queryString = line.split("\t")[0];
+				queryString = queryString.replaceAll("[(]", ",").replaceAll("\\)","").trim();
+				Goal query = Goal.parseGoal(queryString, ",");
+				query.compile(program.getSymbolTable());
+				log.info("Querying: "+query);
+				long start = System.currentTimeMillis();
+				Map<LogicProgramState,Double> dist = getSolutions(prover,query,program);
+				long end = System.currentTimeMillis();
+				Map<String,Double> solutions = Prover.filterSolutions(dist);
+				if (normalize) {
+					log.debug("normalizing");
+					solutions = Dictionary.normalize(solutions);
+				} else {
+					log.debug("not normalizing");
+				}
+				List<Map.Entry<String,Double>> solutionDist = Dictionary.sort(solutions);
+				//			    List<Map.Entry<String,Double>> solutionDist = Dictionary.sort(Dictionary.normalize(dist));
+				log.info("Writing "+solutionDist.size()+" solutions...");
 
                 writer.append("# proved ").append(String.valueOf(querynum)).append("\t").append(query.toSaveString())
                       .append("\t").append((end - start) + " msec");
@@ -129,9 +131,12 @@ public class QueryAnswerer {
                            new RerankingQueryAnswerer((SRW<PosNegRWExample<String>>) c.srw) :
                            new QueryAnswerer();
         log.info("Running queries from " + c.queryFile + "; saving results to " + c.outputFile);
-        if (c.paramsFile != null)
-            qa.addParams(c.program, c.paramsFile, c.weightingScheme);
-        if (c.complexFeatureConfigFile != null)
+        if (c.paramsFile != null) {
+        	ParamsFile file = new ParamsFile(c.paramsFile);
+            qa.addParams(c.program, Dictionary.load(file), c.weightingScheme);
+            file.check(c);
+        }
+	if (c.complexFeatureConfigFile != null)
             ComplexFeatureLibrary.init(c.program, c.complexFeatureConfigFile);
         qa.findSolutions(c.program, c.prover, c.queryFile, c.outputFile, c.normalize);
     }
