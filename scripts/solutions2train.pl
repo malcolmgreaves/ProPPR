@@ -33,7 +33,7 @@ while(<$sf>) {
 	last unless $queryLine;
 	chomp($queryLine);
 	
-	($query,$pos) = split("\t",$queryLine);
+	($query,$pos,@rest) = split("\t",$queryLine);	
 	$ex = $pos;
 	my $ci = rindex($pos,",")+1;
 	$pos = substr($pos,$ci,length($pos)-1-$ci);
