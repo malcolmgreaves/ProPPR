@@ -7,6 +7,7 @@ testcases/textcattoy/programFiles.arg
 testcases/textcattoy/toytrain.cooked
 .project
 beatles
+lex-script
 *.pyc
 *.swp
 *~
@@ -17,3 +18,5 @@ bin
 test-results
 out
 kbp_prototype
+log*
+LOG*
